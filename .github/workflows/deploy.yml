@@ -31,5 +31,4 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./dist/
-          # REMOVA o "./" inicial e garanta que termina com "/"
-          server-dir: mentalmap.josevschmidt.com.br/
+          server-dir: /mentalmap.josevschmidt.com.br/
