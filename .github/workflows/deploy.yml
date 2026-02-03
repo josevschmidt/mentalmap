@@ -31,5 +31,5 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./dist/
-          # AJUSTE AQUI: O caminho da pasta no seu servidor para o subdomínio
-          server-dir: ./mentalmap.josevschmidt.com.br/
+          # REMOVA o "./" inicial e garanta que termina com "/"
+          server-dir: mentalmap.josevschmidt.com.br/
