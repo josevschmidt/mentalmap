@@ -10,6 +10,8 @@ import { HistoryPanel } from './components/HistoryPanel';
 import { ExportModal } from './components/ExportModal';
 import { SearchModal } from './components/SearchModal';
 import { NotesPanel } from './components/NotesPanel';
+import { ShortcutHints } from './components/ShortcutHints';
+
 
 function App() {
   const [nodes, setNodes] = useState<MindMapNode[]>(INITIAL_NODES);
@@ -422,17 +424,7 @@ function App() {
       )}
 
       {/* Instructions Overlay */}
-      {!isPresenterMode && (
-        <div className="absolute bottom-6 left-6 z-40 text-xs font-medium opacity-50 hover:opacity-100 transition-opacity pointer-events-none select-none hidden md:block">
-          <div className="bg-white/50 backdrop-blur-sm p-3 rounded-lg border border-slate-200/50 shadow-sm space-y-1">
-            <div><span className="font-bold">Tab</span> New Child</div>
-            <div><span className="font-bold">Enter</span> New Sibling</div>
-            <div><span className="font-bold">Shift+Tab</span> Navigate</div>
-            <div><span className="font-bold">Ctrl+K</span> Search</div>
-            <div><span className="font-bold">Scroll</span> Zoom / Pan</div>
-          </div>
-        </div>
-      )}
+      {!isPresenterMode && <ShortcutHints />}
 
       <MindMapCanvas
         nodes={nodes}
