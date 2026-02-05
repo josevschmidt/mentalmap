@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Info, Download, History, Upload, BoxSelect, Eye, Palette, Grid3X3, Circle } from 'lucide-react';
+import { Plus, Info, Download, History, Upload, BoxSelect, Eye, Palette, Grid3X3, Circle, CircleOff } from 'lucide-react';
 import { ThemeType, BackgroundStyle } from '../types';
 
 interface ToolbarProps {
@@ -73,15 +73,15 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             </div>
         </div>
 
-        <div className="group relative">
-          <button className="p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 rounded-xl transition-colors" title="Background style">
-            {backgroundStyle === 'dotted' ? <Circle size={18} /> : <Grid3X3 size={18} />}
-          </button>
-          <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-white rounded-lg shadow-xl border border-slate-200 p-2 hidden group-hover:flex flex-col gap-2 min-w-[100px]">
-            <button onClick={() => onSetBackgroundStyle('grid')} className={`px-3 py-1.5 rounded text-left text-sm flex items-center gap-2 hover:bg-slate-50 ${backgroundStyle === 'grid' ? 'bg-slate-100 text-slate-800 font-medium' : 'text-slate-600'}`}><Grid3X3 size={14} /> Grid</button>
-            <button onClick={() => onSetBackgroundStyle('dotted')} className={`px-3 py-1.5 rounded text-left text-sm flex items-center gap-2 hover:bg-slate-50 ${backgroundStyle === 'dotted' ? 'bg-slate-100 text-slate-800 font-medium' : 'text-slate-600'}`}><Circle size={14} /> Dotted</button>
-          </div>
-        </div>
+        <button
+          onClick={() => onSetBackgroundStyle(backgroundStyle === 'dotted' ? 'grid' : backgroundStyle === 'grid' ? 'none' : 'dotted')}
+          className="p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 rounded-xl transition-colors"
+          title="Background: dotted → grid → none"
+        >
+          {backgroundStyle === 'dotted' && <Circle size={18} />}
+          {backgroundStyle === 'grid' && <Grid3X3 size={18} />}
+          {backgroundStyle === 'none' && <CircleOff size={18} />}
+        </button>
         
         <button
           onClick={onToggleFocus}

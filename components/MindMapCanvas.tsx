@@ -474,22 +474,6 @@ export const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
 
   return (
     <div id="mindmap-canvas-container" className={`w-full h-full overflow-hidden relative select-none cursor-default ${currentTheme.bg}`}>
-      {/* Grid / Dotted Pattern Background */}
-      <div
-        className="absolute inset-0 pointer-events-none opacity-[0.05]"
-        style={
-          backgroundStyle === 'dotted'
-            ? {
-                backgroundImage: `radial-gradient(${currentTheme.grid} 1px, transparent 1px)`,
-                backgroundSize: '20px 20px'
-              }
-            : {
-                backgroundImage: `linear-gradient(${currentTheme.grid} 1px, transparent 1px), linear-gradient(90deg, ${currentTheme.grid} 1px, transparent 1px)`,
-                backgroundSize: '20px 20px'
-              }
-        }
-      />
-
       {/* Linking Mode Indicator */}
       {connectingNodeId && (
         <div className="absolute top-20 left-1/2 -translate-x-1/2 z-50 bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg animate-pulse pointer-events-none">
@@ -512,9 +496,32 @@ export const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
             <stop offset="0%" stopColor="#3b82f6" />
             <stop offset="100%" stopColor="#8b5cf6" />
           </linearGradient>
+          {backgroundStyle !== 'none' && (
+            <>
+              <pattern id="canvas-dotted-pattern" patternUnits="userSpaceOnUse" width={20} height={20}>
+                <circle cx={10} cy={10} r={1} fill={currentTheme.grid} />
+              </pattern>
+              <pattern id="canvas-grid-pattern" patternUnits="userSpaceOnUse" width={20} height={20}>
+                <line x1={0} y1={0} x2={0} y2={20} stroke={currentTheme.grid} strokeWidth={1} />
+                <line x1={0} y1={0} x2={20} y2={0} stroke={currentTheme.grid} strokeWidth={1} />
+              </pattern>
+            </>
+          )}
         </defs>
 
         <g ref={gRef}>
+          {/* Background (inside zoom group so it scales with zoom) */}
+          {backgroundStyle !== 'none' && (
+            <rect
+              x={-10000}
+              y={-10000}
+              width={20000}
+              height={20000}
+              fill={backgroundStyle === 'dotted' ? 'url(#canvas-dotted-pattern)' : 'url(#canvas-grid-pattern)'}
+              opacity={0.2}
+              className="pointer-events-none"
+            />
+          )}
           {/* Relationships Layer (Cross-links) */}
           <g>
             {relationships.map(rel => {
