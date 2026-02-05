@@ -436,11 +436,11 @@ function App() {
       {/* Bottom right: made by (hidden in presenter mode) */}
       {!isPresenterMode && (
         <a
-          href="https://instagram.com/josevschmidt"
+          href="https://github.com/josevschmidt"
           target="_blank"
           rel="noopener noreferrer"
           className="absolute bottom-4 right-4 z-50 text-xs text-slate-400 hover:text-slate-600 transition-colors"
-          title="Instagram"
+          title="GitHub"
         >
           made by @josevschmidt
         </a>
