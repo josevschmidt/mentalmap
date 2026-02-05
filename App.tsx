@@ -404,11 +404,11 @@ function App() {
       <input type="file" ref={importInputRef} onChange={handleImportFile} accept=".json" className="hidden" />
       <input type="file" ref={imageInputRef} onChange={handleImageFile} accept="image/*" className="hidden" />
 
-      {/* Top right: mentalmap (center on root) + Presenter Mode */}
+      {/* Top left: mentalmap (center on root) */}
       <button
         type="button"
         onClick={() => setCenterOnNodeId(ROOT_NODE_ID)}
-        className="absolute top-4 right-20 z-50 text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors"
+        className="absolute top-4 left-4 z-50 text-2xl font-bold text-slate-500 hover:text-slate-800 transition-colors"
         title="Center on main root"
       >
         mentalmap
