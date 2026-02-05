@@ -28,6 +28,8 @@ interface MindMapCanvasProps {
   connectingNodeId: string | null;
   onNodeConnection: (sourceId: string, targetId: string) => void;
   onMoveNodeTo: (nodeId: string, newParentId: string | null, siblingId: string | null) => void;
+  centerOnNodeId: string | null;
+  onCenterComplete: () => void;
 }
 
 export const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
@@ -50,6 +52,8 @@ export const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
   connectingNodeId,
   onNodeConnection,
   onMoveNodeTo,
+  centerOnNodeId,
+  onCenterComplete,
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const gRef = useRef<SVGGElement>(null);
@@ -211,6 +215,25 @@ export const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
       svg.transition().duration(500).ease(d3.easeCubicOut).call(zoomRef.current.transform, newTransform);
     }
   }, [selectedIds, layoutNodes, dimensions, draggingState]);
+
+  // Center camera on a specific node (e.g. root) when requested
+  useEffect(() => {
+    if (!centerOnNodeId || !zoomRef.current || !svgRef.current) return;
+    const node = layoutNodes.find(n => n.id === centerOnNodeId);
+    if (!node) {
+      onCenterComplete();
+      return;
+    }
+    const svg = d3.select(svgRef.current);
+    const { width, height } = dimensions;
+    const nodeCenterX = node.x ?? 0;
+    const nodeCenterY = node.y ?? 0;
+    const newTransform = d3.zoomIdentity
+      .translate(width / 2 - nodeCenterX, height / 2 - nodeCenterY)
+      .scale(1);
+    svg.transition().duration(400).ease(d3.easeCubicOut).call(zoomRef.current.transform, newTransform);
+    onCenterComplete();
+  }, [centerOnNodeId, layoutNodes, dimensions, onCenterComplete]);
 
   // Interaction Handlers
   const getSvgPoint = (clientX: number, clientY: number) => {

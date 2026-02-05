@@ -39,6 +39,7 @@ function App() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isPresenterMode, setIsPresenterMode] = useState(false);
+  const [centerOnNodeId, setCenterOnNodeId] = useState<string | null>(null);
 
   // History State
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -403,7 +404,15 @@ function App() {
       <input type="file" ref={importInputRef} onChange={handleImportFile} accept=".json" className="hidden" />
       <input type="file" ref={imageInputRef} onChange={handleImageFile} accept="image/*" className="hidden" />
 
-      {/* Presenter Mode Toggle */}
+      {/* Top right: mentalmap (center on root) + Presenter Mode */}
+      <button
+        type="button"
+        onClick={() => setCenterOnNodeId(ROOT_NODE_ID)}
+        className="absolute top-4 right-20 z-50 text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors"
+        title="Center on main root"
+      >
+        mentalmap
+      </button>
       <button
         onClick={() => {
           setIsPresenterMode(!isPresenterMode);
@@ -422,6 +431,19 @@ function App() {
         <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-6 py-3 rounded-full shadow-xl z-[60] animate-in slide-in-from-top-4 fade-in duration-300">
           {errorMsg}
         </div>
+      )}
+
+      {/* Bottom right: made by (hidden in presenter mode) */}
+      {!isPresenterMode && (
+        <a
+          href="https://instagram.com/josevschmidt"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="absolute bottom-4 right-4 z-50 text-xs text-slate-400 hover:text-slate-600 transition-colors"
+          title="Instagram"
+        >
+          made by @josevschmidt
+        </a>
       )}
 
       {/* Instructions Overlay */}
@@ -447,6 +469,8 @@ function App() {
         backgroundStyle={backgroundStyle}
         connectingNodeId={connectingNodeId}
         onNodeConnection={handleNodeConnection}
+        centerOnNodeId={centerOnNodeId}
+        onCenterComplete={() => setCenterOnNodeId(null)}
       />
 
       {/* Overlays (Hidden in Presenter Mode) */}
