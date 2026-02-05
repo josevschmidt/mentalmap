@@ -55,16 +55,31 @@ export const calculateLayout = (
         node.data.height = node.data.height || NODE_HEIGHT;
       });
 
-      // Configure tree layout
+      // Bottom-up: compute vertical span of each node's subtree so siblings reserve enough space
+      root.eachAfter((node) => {
+        const nodeHeight = (node.data.height || NODE_HEIGHT) + (node.data.image ? (node.data.imageHeight || 80) : 0);
+        const children = node.children || [];
+        if (children.length === 0) {
+          // @ts-ignore
+          node._subtreeSpan = nodeHeight;
+        } else {
+          const childrenTotal = children.reduce((sum: number, c: any) => sum + (c._subtreeSpan ?? 0), 0);
+          const gaps = (children.length - 1) * VERTICAL_SPACING;
+          // Subtree span = at least this node's height, and at least the full span of children + gaps
+          // @ts-ignore
+          node._subtreeSpan = Math.max(nodeHeight, childrenTotal + gaps);
+        }
+      });
+
+      // Configure tree layout: separation uses full subtree span so different branches don't overlap
       const treeLayout = d3.tree<MindMapNode>()
         .nodeSize([1, 1])
         .separation((a, b) => {
-          // Calculate required vertical distance
-          const aHeight = (a.data.height || NODE_HEIGHT) + (a.data.image ? (a.data.imageHeight || 80) : 0);
-          const bHeight = (b.data.height || NODE_HEIGHT) + (b.data.image ? (b.data.imageHeight || 80) : 0);
-
-          const sep = (aHeight / 2) + (bHeight / 2) + VERTICAL_SPACING;
-          return sep;
+          // @ts-ignore
+          const spanA = a._subtreeSpan ?? (a.data.height || NODE_HEIGHT) + (a.data.image ? (a.data.imageHeight || 80) : 0);
+          // @ts-ignore
+          const spanB = b._subtreeSpan ?? (b.data.height || NODE_HEIGHT) + (b.data.image ? (b.data.imageHeight || 80) : 0);
+          return (spanA / 2) + (spanB / 2) + VERTICAL_SPACING;
         });
 
       treeLayout(root);
