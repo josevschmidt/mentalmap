@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Presentation, X } from 'lucide-react';
-import { MindMapNode, HistoryEntry, Relationship, ThemeType } from './types';
+import { MindMapNode, HistoryEntry, Relationship, ThemeType, BackgroundStyle } from './types';
 import { INITIAL_NODES, ROOT_NODE_ID, COLORS } from './constants';
 import { MindMapCanvas } from './components/MindMapCanvas';
 import { Toolbar } from './components/Toolbar';
@@ -19,6 +19,7 @@ function App() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [lastCreatedNodeId, setLastCreatedNodeId] = useState<string | null>(null);
   const [theme, setTheme] = useState<ThemeType>('modern');
+  const [backgroundStyle, setBackgroundStyle] = useState<BackgroundStyle>('dotted');
 
   // Linking State
   const [connectingNodeId, setConnectingNodeId] = useState<string | null>(null);
@@ -443,6 +444,7 @@ function App() {
         isFocusMode={isFocusMode}
         isPresenterMode={isPresenterMode}
         theme={theme}
+        backgroundStyle={backgroundStyle}
         connectingNodeId={connectingNodeId}
         onNodeConnection={handleNodeConnection}
       />
@@ -462,6 +464,8 @@ function App() {
             onToggleFocus={() => setIsFocusMode(!isFocusMode)}
             currentTheme={theme}
             onSetTheme={setTheme}
+            backgroundStyle={backgroundStyle}
+            onSetBackgroundStyle={setBackgroundStyle}
           />
 
           <SearchModal

@@ -40,6 +40,8 @@ export interface Relationship {
 
 export type ThemeType = 'modern' | 'midnight' | 'professional';
 
+export type BackgroundStyle = 'grid' | 'dotted';
+
 export interface Point {
   x: number;
   y: number;

@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import * as d3 from 'd3';
-import { MindMapNode, Relationship, ThemeType } from '../types';
+import { MindMapNode, Relationship, ThemeType, BackgroundStyle } from '../types';
 import { calculateLayout } from '../utils/treeLayout';
 import { MindNode } from './MindNode';
 import { Connection } from './Connection';
@@ -22,6 +22,7 @@ interface MindMapCanvasProps {
   isFocusMode: boolean;
   isPresenterMode: boolean;
   theme: ThemeType;
+  backgroundStyle: BackgroundStyle;
 
   // New props for features
   connectingNodeId: string | null;
@@ -45,6 +46,7 @@ export const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
   isFocusMode,
   isPresenterMode,
   theme,
+  backgroundStyle,
   connectingNodeId,
   onNodeConnection,
   onMoveNodeTo,
@@ -472,13 +474,20 @@ export const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
 
   return (
     <div id="mindmap-canvas-container" className={`w-full h-full overflow-hidden relative select-none cursor-default ${currentTheme.bg}`}>
-      {/* Grid Pattern Background */}
+      {/* Grid / Dotted Pattern Background */}
       <div
         className="absolute inset-0 pointer-events-none opacity-[0.05]"
-        style={{
-          backgroundImage: `radial-gradient(${currentTheme.grid} 1px, transparent 1px)`,
-          backgroundSize: '20px 20px'
-        }}
+        style={
+          backgroundStyle === 'dotted'
+            ? {
+                backgroundImage: `radial-gradient(${currentTheme.grid} 1px, transparent 1px)`,
+                backgroundSize: '20px 20px'
+              }
+            : {
+                backgroundImage: `linear-gradient(${currentTheme.grid} 1px, transparent 1px), linear-gradient(90deg, ${currentTheme.grid} 1px, transparent 1px)`,
+                backgroundSize: '20px 20px'
+              }
+        }
       />
 
       {/* Linking Mode Indicator */}
