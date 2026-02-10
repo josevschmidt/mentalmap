@@ -1,10 +1,10 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Presentation } from 'lucide-react';
 import { MindMapNode, HistoryEntry, Relationship, ThemeType, BackgroundStyle } from './types';
 import { INITIAL_NODES, ROOT_NODE_ID, COLORS } from './constants';
 import { MindMapCanvas } from './components/MindMapCanvas';
 import { Toolbar } from './components/Toolbar';
+import { Navbar } from './components/Navbar';
 import { ShortcutsModal } from './components/ShortcutsModal';
 import { HistoryPanel } from './components/HistoryPanel';
 import { ExportModal } from './components/ExportModal';
@@ -25,6 +25,7 @@ function AppContent() {
   const [currentMapName, setCurrentMapName] = useState<string>('Untitled Map');
   const [isMapsDashboardOpen, setIsMapsDashboardOpen] = useState(false);
   const [storageUsage, setStorageUsage] = useState(0);
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error' | null>(null);
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [lastCreatedNodeId, setLastCreatedNodeId] = useState<string | null>(null);
@@ -60,9 +61,13 @@ function AppContent() {
   useEffect(() => {
     const fetchLatest = async () => {
       if (user && !currentMapId) {
-        const maps = await listMaps(user.id);
-        if (maps.length > 0) {
-          handleSelectMap(maps[0]);
+        try {
+          const maps = await listMaps(user.id);
+          if (maps.length > 0) {
+            handleSelectMap(maps[0]);
+          }
+        } catch (e) {
+          console.error('Initial fetch failed', e);
         }
       } else if (!user) {
         // Reset when logging out
@@ -70,6 +75,8 @@ function AppContent() {
         setCurrentMapName('Untitled Map');
         setNodes(INITIAL_NODES);
         setRelationships([]);
+        setStorageUsage(0);
+        setSaveStatus(null);
       }
     };
     fetchLatest();
@@ -83,20 +90,26 @@ function AppContent() {
         const isDirty = nodes.length > INITIAL_NODES.length || relationships.length > 0 || currentMapId;
 
         if (isDirty) {
+          setSaveStatus('saving');
           const result = await saveMap(user.id, nodes, relationships, currentMapId || undefined, currentMapName);
           if (result.success) {
             setStorageUsage(result.usage || 0);
+            setSaveStatus('saved');
             if (result.mapId && !currentMapId) {
               setCurrentMapId(result.mapId);
             }
           } else if (result.message) {
+            setSaveStatus('error');
             setErrorMsg(result.message);
             setTimeout(() => setErrorMsg(null), 5000);
           }
         }
       }
     };
-    persistData();
+
+    // Set a small delay for auto-save to debounces changes
+    const timeout = setTimeout(persistData, 1000);
+    return () => clearTimeout(timeout);
   }, [nodes, relationships, user, currentMapId, currentMapName]);
 
   const handleSelectMap = (map: MindMap) => {
@@ -106,6 +119,7 @@ function AppContent() {
     setRelationships(map.data.relationships);
     getStorageUsage(map.user_id).then(setStorageUsage);
     setCenterOnNodeId(ROOT_NODE_ID);
+    setSaveStatus('saved');
   };
 
   const handleCreateNewMap = () => {
@@ -115,6 +129,7 @@ function AppContent() {
     setRelationships([]);
     setStorageUsage(0);
     setCenterOnNodeId(ROOT_NODE_ID);
+    setSaveStatus(null);
   };
 
   // --- History Helper ---
@@ -170,7 +185,6 @@ function AppContent() {
       try {
         const json = event.target?.result as string;
         const importedData = JSON.parse(json);
-        // Handle legacy format (array only) or new format with relationships
         if (Array.isArray(importedData)) {
           setNodes(importedData);
           setRelationships([]);
@@ -220,8 +234,6 @@ function AppContent() {
 
   const handleSelectNodes = useCallback((ids: string[]) => {
     setSelectedIds(ids);
-    // Use functional update to ensure we don't use a stale lastCreatedNodeId
-    // If the selection moved AWAY from the new node, clear the flag
     setLastCreatedNodeId(prev => (prev && !ids.includes(prev)) ? null : prev);
   }, []);
 
@@ -316,10 +328,7 @@ function AppContent() {
       collect(id);
 
       const newNodes = prev.filter(n => !nodesToDelete.has(n.id));
-
-      // Also cleanup relationships
       setRelationships(rels => rels.filter(r => !nodesToDelete.has(r.sourceId) && !nodesToDelete.has(r.targetId)));
-
       addToHistory(newNodes, 'Deleted Node');
       return newNodes;
     });
@@ -339,7 +348,6 @@ function AppContent() {
       const nodeIndex = prev.findIndex(n => n.id === nodeId);
       if (nodeIndex === -1) return prev;
 
-      // Circular Check
       if (newParentId) {
         let current = newParentId;
         while (current) {
@@ -349,17 +357,14 @@ function AppContent() {
             return prev;
           }
           const parent = prev.find(n => n.id === current);
-          current = parent?.parentId || ''; // stop if root (null/undefined)
+          current = parent?.parentId || '';
         }
       }
 
       const node = { ...prev[nodeIndex], parentId: newParentId };
       const newNodes = [...prev];
-
-      // Remove from old position
       newNodes.splice(nodeIndex, 1);
 
-      // Insert at new position
       if (siblingId) {
         const siblingIndex = newNodes.findIndex(n => n.id === siblingId);
         if (siblingIndex !== -1) {
@@ -368,7 +373,6 @@ function AppContent() {
           newNodes.push(node);
         }
       } else {
-        // Append to end (last sibling)
         newNodes.push(node);
       }
 
@@ -376,9 +380,6 @@ function AppContent() {
       return newNodes;
     });
   }, [addToHistory]);
-
-
-  // --- Relationship Handling ---
 
   const handleNodeConnection = (sourceId: string, targetId: string) => {
     if (!sourceId) {
@@ -389,7 +390,6 @@ function AppContent() {
       setConnectingNodeId(sourceId);
       return;
     }
-    // Create connection
     const newRel: Relationship = {
       id: uuidv4(),
       sourceId,
@@ -401,7 +401,6 @@ function AppContent() {
 
   const handleSearchSelect = (id: string) => {
     handleSelectNodes([id]);
-    // The Canvas component has an effect that zooms to selected ID automatically.
   };
 
   // --- Keyboard Shortcuts ---
@@ -409,7 +408,6 @@ function AppContent() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
-      // Allow Tab and Enter to pass through if it's contentEditable (our mind nodes)
       const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
       const isShortcutKey = e.key === 'Tab' || e.key === 'Enter';
 
@@ -421,7 +419,6 @@ function AppContent() {
       if (e.key === 'Tab') {
         e.preventDefault();
         if (e.shiftKey) {
-          // Navigate Back (Select Parent)
           if (currentSelectedIds.length === 1) {
             const node = currentNodes.find(n => n.id === currentSelectedIds[0]);
             if (node && node.parentId) {
@@ -429,7 +426,6 @@ function AppContent() {
             }
           }
         } else {
-          // Add Child
           if (currentSelectedIds.length === 1) addNode(currentSelectedIds[0]);
         }
       } else if (e.key === 'Enter') {
@@ -454,9 +450,6 @@ function AppContent() {
       } else if (e.key === ' ' && currentSelectedIds.length === 1) {
         e.preventDefault();
         toggleCollapse(currentSelectedIds[0]);
-      } else if (e.key.toLowerCase() === 'z' && (e.ctrlKey || e.metaKey)) {
-        e.preventDefault();
-        // Basic undo support via history panel mostly
       } else if (e.key.toLowerCase() === 'f') {
         setIsFocusMode(prev => !prev);
       } else if (e.key.toLowerCase() === 'k' && (e.ctrlKey || e.metaKey)) {
@@ -475,34 +468,35 @@ function AppContent() {
       <input type="file" ref={importInputRef} onChange={handleImportFile} accept=".json" className="hidden" />
       <input type="file" ref={imageInputRef} onChange={handleImageFile} accept="image/*" className="hidden" />
 
-      {/* Top left: mentalmap (center on root) */}
+      {/* Top left: Brand */}
       <div className="absolute top-4 left-4 z-50 flex flex-col">
         <button
           type="button"
           onClick={() => setCenterOnNodeId(ROOT_NODE_ID)}
-          className="text-2xl font-bold text-slate-500 hover:text-slate-800 transition-colors"
+          className="text-2xl font-black text-slate-900 drop-shadow-sm hover:text-blue-600 transition-colors"
           title="Center on main root"
         >
           mentalmap
         </button>
-        <span className="text-[10px] uppercase tracking-widest font-bold text-slate-400 opacity-60">
+        <span className="text-[10px] uppercase tracking-widest font-black text-blue-600 opacity-60">
           {currentMapName}
         </span>
       </div>
 
-      <button
-        onClick={() => {
+      {/* Top Right: Navbar */}
+      <Navbar
+        user={user}
+        onLogin={signInWithGoogle}
+        onLogout={logout}
+        onOpenDashboard={() => setIsMapsDashboardOpen(true)}
+        isPresenterMode={isPresenterMode}
+        onTogglePresenter={() => {
           setIsPresenterMode(!isPresenterMode);
-          if (!isPresenterMode) setActiveNoteNodeId(null); // Close notes
+          if (!isPresenterMode) setActiveNoteNodeId(null);
         }}
-        className={`absolute top-4 right-4 z-50 p-2.5 rounded-xl border transition-all duration-300 ease-in-out ${isPresenterMode
-          ? 'bg-white border-purple-500 text-purple-600 shadow-[0_0_20px_rgba(168,85,247,0.5)] ring-2 ring-purple-100 scale-105'
-          : 'bg-white border-slate-200 text-slate-500 hover:text-purple-600 hover:border-purple-200 shadow-sm hover:shadow-md'
-          }`}
-        title={isPresenterMode ? "Exit Presenter Mode" : "Enter Presenter Mode"}
-      >
-        <Presentation size={20} className={isPresenterMode ? "drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]" : ""} />
-      </button>
+        saveStatus={saveStatus}
+        storageUsage={storageUsage}
+      />
 
       {errorMsg && (
         <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-6 py-3 rounded-full shadow-xl z-[60] animate-in slide-in-from-top-4 fade-in duration-300">
@@ -510,20 +504,18 @@ function AppContent() {
         </div>
       )}
 
-      {/* Bottom right: made by (hidden in presenter mode) */}
+      {/* Bottom right Credits */}
       {!isPresenterMode && (
         <a
           href="https://github.com/josevschmidt"
           target="_blank"
           rel="noopener noreferrer"
-          className="absolute bottom-4 right-4 z-50 text-xs text-slate-400 hover:text-slate-600 transition-colors"
-          title="GitHub"
+          className="absolute bottom-4 right-4 z-50 text-[10px] font-bold tracking-tighter text-slate-400 hover:text-slate-600 transition-colors bg-white/50 px-2 py-1 rounded-full backdrop-blur-sm"
         >
-          made by @josevschmidt
+          MADE BY @JOSEVSCHMIDT
         </a>
       )}
 
-      {/* Instructions Overlay */}
       {!isPresenterMode && <ShortcutHints />}
 
       <MindMapCanvas
@@ -550,7 +542,7 @@ function AppContent() {
         onCenterComplete={() => setCenterOnNodeId(null)}
       />
 
-      {/* Overlays (Hidden in Presenter Mode) */}
+      {/* Bottom Toolbar */}
       {!isPresenterMode && (
         <>
           <Toolbar
@@ -567,11 +559,6 @@ function AppContent() {
             onSetTheme={setTheme}
             backgroundStyle={backgroundStyle}
             onSetBackgroundStyle={setBackgroundStyle}
-            user={user}
-            onLogin={signInWithGoogle}
-            onLogout={logout}
-            storageUsage={storageUsage}
-            onOpenDashboard={() => setIsMapsDashboardOpen(true)}
           />
 
           <SearchModal
