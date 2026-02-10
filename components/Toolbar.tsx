@@ -1,6 +1,7 @@
 import React from 'react';
-import { Plus, Info, Download, History, Upload, BoxSelect, Eye, Palette, Grid3X3, Circle, CircleOff } from 'lucide-react';
+import { Plus, Info, Download, History, Upload, BoxSelect, Eye, Palette, Grid3X3, Circle, CircleOff, Cloud, LogOut, User as UserIcon } from 'lucide-react';
 import { ThemeType, BackgroundStyle } from '../types';
+import { GoogleLogin } from '@react-oauth/google';
 
 interface ToolbarProps {
   onAddChild: () => void;
@@ -16,10 +17,14 @@ interface ToolbarProps {
   onSetTheme: (t: ThemeType) => void;
   backgroundStyle: BackgroundStyle;
   onSetBackgroundStyle: (s: BackgroundStyle) => void;
+  user: any;
+  onLogin: (credential: string) => void;
+  onLogout: () => void;
+  storageUsage: number;
 }
 
-export const Toolbar: React.FC<ToolbarProps> = ({ 
-  onAddChild, 
+export const Toolbar: React.FC<ToolbarProps> = ({
+  onAddChild,
   onAddRoot,
   canAdd,
   onShowHelp,
@@ -35,7 +40,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 }) => {
   return (
     <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-md border border-slate-200 shadow-xl rounded-2xl px-4 py-2 flex items-center gap-2 z-50">
-      
+
       <div className="flex items-center gap-1 pr-3 border-r border-slate-200">
         <button
           onClick={onAddRoot}
@@ -49,11 +54,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         <button
           onClick={onAddChild}
           disabled={!canAdd}
-          className={`p-2 rounded-xl flex items-center gap-2 transition-colors ${
-            canAdd 
-              ? 'text-slate-700 hover:bg-slate-100 hover:text-blue-600' 
+          className={`p-2 rounded-xl flex items-center gap-2 transition-colors ${canAdd
+              ? 'text-slate-700 hover:bg-slate-100 hover:text-blue-600'
               : 'text-slate-300 cursor-not-allowed'
-          }`}
+            }`}
           title="Add Child Node (Tab)"
         >
           <Plus size={20} />
@@ -63,14 +67,14 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
       <div className="flex items-center gap-1 pr-3 border-r border-slate-200">
         <div className="group relative">
-            <button className="p-2 text-slate-500 hover:bg-slate-100 hover:text-purple-600 rounded-xl transition-colors">
-                <Palette size={18} />
-            </button>
-            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-white rounded-lg shadow-xl border border-slate-200 p-2 hidden group-hover:flex flex-col gap-2 min-w-[120px]">
-                <button onClick={() => onSetTheme('modern')} className={`px-3 py-1.5 rounded text-left text-sm hover:bg-slate-50 ${currentTheme === 'modern' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600'}`}>Modern</button>
-                <button onClick={() => onSetTheme('midnight')} className={`px-3 py-1.5 rounded text-left text-sm hover:bg-slate-800 hover:text-white ${currentTheme === 'midnight' ? 'bg-slate-900 text-white font-medium' : 'text-slate-600'}`}>Midnight</button>
-                <button onClick={() => onSetTheme('professional')} className={`px-3 py-1.5 rounded text-left text-sm hover:bg-slate-50 ${currentTheme === 'professional' ? 'bg-slate-100 text-slate-800 font-medium' : 'text-slate-600'}`}>Professional</button>
-            </div>
+          <button className="p-2 text-slate-500 hover:bg-slate-100 hover:text-purple-600 rounded-xl transition-colors">
+            <Palette size={18} />
+          </button>
+          <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-white rounded-lg shadow-xl border border-slate-200 p-2 hidden group-hover:flex flex-col gap-2 min-w-[120px]">
+            <button onClick={() => onSetTheme('modern')} className={`px-3 py-1.5 rounded text-left text-sm hover:bg-slate-50 ${currentTheme === 'modern' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600'}`}>Modern</button>
+            <button onClick={() => onSetTheme('midnight')} className={`px-3 py-1.5 rounded text-left text-sm hover:bg-slate-800 hover:text-white ${currentTheme === 'midnight' ? 'bg-slate-900 text-white font-medium' : 'text-slate-600'}`}>Midnight</button>
+            <button onClick={() => onSetTheme('professional')} className={`px-3 py-1.5 rounded text-left text-sm hover:bg-slate-50 ${currentTheme === 'professional' ? 'bg-slate-100 text-slate-800 font-medium' : 'text-slate-600'}`}>Professional</button>
+          </div>
         </div>
 
         <button
@@ -82,14 +86,13 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           {backgroundStyle === 'grid' && <Grid3X3 size={18} />}
           {backgroundStyle === 'none' && <CircleOff size={18} />}
         </button>
-        
+
         <button
           onClick={onToggleFocus}
-          className={`p-2 rounded-xl transition-colors ${
-            isFocusMode 
-              ? 'bg-blue-100 text-blue-600 shadow-inner' 
+          className={`p-2 rounded-xl transition-colors ${isFocusMode
+              ? 'bg-blue-100 text-blue-600 shadow-inner'
               : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'
-          }`}
+            }`}
           title="Toggle Focus Mode"
         >
           <Eye size={18} />

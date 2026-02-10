@@ -11,11 +11,18 @@ import { ExportModal } from './components/ExportModal';
 import { SearchModal } from './components/SearchModal';
 import { NotesPanel } from './components/NotesPanel';
 import { ShortcutHints } from './components/ShortcutHints';
+import { GoogleOAuthProvider } from '@react-oauth/google';
+import { AuthProvider, useAuth } from './services/auth';
+import { loadMap, saveMap, getStorageUsage } from './services/storage';
 
+const GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"; // Placeholder
 
-function App() {
+function AppContent() {
   const [nodes, setNodes] = useState<MindMapNode[]>(INITIAL_NODES);
   const [relationships, setRelationships] = useState<Relationship[]>([]);
+  const { user, login, logout } = useAuth();
+  const [storageUsage, setStorageUsage] = useState(0);
+
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [lastCreatedNodeId, setLastCreatedNodeId] = useState<string | null>(null);
   const [theme, setTheme] = useState<ThemeType>('modern');
@@ -43,6 +50,33 @@ function App() {
 
   // History State
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+
+  // --- Storage Persistence ---
+
+  // Load from cloud-simulation when user logs in
+  useEffect(() => {
+    if (user) {
+      const data = loadMap(user.id);
+      if (data) {
+        setNodes(data.nodes);
+        setRelationships(data.relationships);
+        setStorageUsage(getStorageUsage(user.id));
+      }
+    }
+  }, [user]);
+
+  // Auto-save to cloud-simulation
+  useEffect(() => {
+    if (user) {
+      const result = saveMap(user.id, nodes, relationships);
+      if (result.success) {
+        setStorageUsage(result.usage || 0);
+      } else if (result.message) {
+        setErrorMsg(result.message);
+        setTimeout(() => setErrorMsg(null), 5000);
+      }
+    }
+  }, [nodes, relationships, user]);
 
   // --- History Helper ---
 
@@ -490,6 +524,10 @@ function App() {
             onSetTheme={setTheme}
             backgroundStyle={backgroundStyle}
             onSetBackgroundStyle={setBackgroundStyle}
+            user={user}
+            onLogin={login}
+            onLogout={logout}
+            storageUsage={storageUsage}
           />
 
           <SearchModal
@@ -519,5 +557,13 @@ function App() {
     </div>
   );
 }
+
+const App = () => (
+  <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  </GoogleOAuthProvider>
+);
 
 export default App;
