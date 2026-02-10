@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Presentation, X } from 'lucide-react';
+import { Presentation } from 'lucide-react';
 import { MindMapNode, HistoryEntry, Relationship, ThemeType, BackgroundStyle } from './types';
 import { INITIAL_NODES, ROOT_NODE_ID, COLORS } from './constants';
 import { MindMapCanvas } from './components/MindMapCanvas';
@@ -11,16 +11,13 @@ import { ExportModal } from './components/ExportModal';
 import { SearchModal } from './components/SearchModal';
 import { NotesPanel } from './components/NotesPanel';
 import { ShortcutHints } from './components/ShortcutHints';
-import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider, useAuth } from './services/auth';
 import { loadMap, saveMap, getStorageUsage } from './services/storage';
-
-const GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"; // Placeholder
 
 function AppContent() {
   const [nodes, setNodes] = useState<MindMapNode[]>(INITIAL_NODES);
   const [relationships, setRelationships] = useState<Relationship[]>([]);
-  const { user, login, logout } = useAuth();
+  const { user, signInWithGoogle, logout } = useAuth();
   const [storageUsage, setStorageUsage] = useState(0);
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -53,29 +50,36 @@ function AppContent() {
 
   // --- Storage Persistence ---
 
-  // Load from cloud-simulation when user logs in
+  // Load from cloud when user logs in
   useEffect(() => {
-    if (user) {
-      const data = loadMap(user.id);
-      if (data) {
-        setNodes(data.nodes);
-        setRelationships(data.relationships);
-        setStorageUsage(getStorageUsage(user.id));
+    const fetchData = async () => {
+      if (user) {
+        const data = await loadMap(user.id);
+        if (data) {
+          setNodes(data.nodes);
+          setRelationships(data.relationships);
+          const usage = await getStorageUsage(user.id);
+          setStorageUsage(usage);
+        }
       }
-    }
+    };
+    fetchData();
   }, [user]);
 
-  // Auto-save to cloud-simulation
+  // Auto-save to cloud
   useEffect(() => {
-    if (user) {
-      const result = saveMap(user.id, nodes, relationships);
-      if (result.success) {
-        setStorageUsage(result.usage || 0);
-      } else if (result.message) {
-        setErrorMsg(result.message);
-        setTimeout(() => setErrorMsg(null), 5000);
+    const persistData = async () => {
+      if (user) {
+        const result = await saveMap(user.id, nodes, relationships);
+        if (result.success) {
+          setStorageUsage(result.usage || 0);
+        } else if (result.message) {
+          setErrorMsg(result.message);
+          setTimeout(() => setErrorMsg(null), 5000);
+        }
       }
-    }
+    };
+    persistData();
   }, [nodes, relationships, user]);
 
   // --- History Helper ---
@@ -294,8 +298,6 @@ function AppContent() {
   const moveNodePosition = useCallback((id: string, x: number, y: number) => {
     setNodes(prev => prev.map(n => n.id === id ? { ...n, x, y } : n));
   }, []);
-
-  /* Old reparentNode and reorderNode removed */
 
   const moveNode = useCallback((nodeId: string, newParentId: string | null, siblingId: string | null) => {
     setNodes(prev => {
@@ -525,7 +527,7 @@ function AppContent() {
             backgroundStyle={backgroundStyle}
             onSetBackgroundStyle={setBackgroundStyle}
             user={user}
-            onLogin={login}
+            onLogin={signInWithGoogle}
             onLogout={logout}
             storageUsage={storageUsage}
           />
@@ -559,11 +561,9 @@ function AppContent() {
 }
 
 const App = () => (
-  <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
-  </GoogleOAuthProvider>
+  <AuthProvider>
+    <AppContent />
+  </AuthProvider>
 );
 
 export default App;
