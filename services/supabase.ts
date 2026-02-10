@@ -4,10 +4,21 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-// Create a dummy client that doesn't crash if keys are missing
+// Utility to check if a string is a valid URL
+const isValidUrl = (url: string) => {
+    if (!url || typeof url !== 'string') return false;
+    try {
+        const u = new URL(url);
+        return u.protocol === 'http:' || u.protocol === 'https:';
+    } catch (e) {
+        return false;
+    }
+};
+
+// Create a dummy client that doesn't crash if keys are missing or invalid
 const createSafeClient = () => {
-    if (!supabaseUrl || !supabaseAnonKey) {
-        console.warn('Supabase credentials missing. App will run in local-only mode.');
+    if (!isValidUrl(supabaseUrl) || !supabaseAnonKey || supabaseAnonKey === 'your-long-anon-key' || supabaseUrl.includes('your-project-id')) {
+        console.warn('Supabase credentials missing or invalid. App will run in local-only mode.');
 
         // Return a dummy object that mimics the Supabase client structure to avoid crashes
         return {
