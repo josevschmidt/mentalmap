@@ -22,6 +22,8 @@
 
 ## ✨ Features
 
+- **☁️ Real-Time Cloud Sync**: Secure Google Authentication and database persistence powered by Supabase.
+- **💾 1MB Storage Limit**: Per-user storage limits with a visual usage indicator to keep maps lean and efficient.
 - **🎨 Professional Themes**: Switch between `Modern`, `Midnight`, and `Professional` themes to match your work environment.
 - **🔳 Dynamic Backgrounds**: Customize your canvas with `Dotted`, `Grid`, or `None` background styles.
 - **🖼️ Rich Media Support**: Attach images directly to nodes to visualize your concepts.
@@ -42,7 +44,7 @@
 
 ## 🚀 Getting Started
 
-Follow these steps to get the project running locally on your system.
+Follow these steps to get the project running locally on your system. For a detailed guide on setting up authentication and cloud storage, see the [SETUP_GUIDE.md](./SETUP_GUIDE.md).
 
 ### Prerequisites
 
