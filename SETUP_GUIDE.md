@@ -85,6 +85,48 @@ If you are deploying this app to a service (like Vercel, Netlify, or GitHub Page
 
 ---
 
+## 5. Production URL (FTP / GitHub Actions)
+
+This repo deploys to **`https://mentalmap.josevschmidt.com.br`** via GitHub Actions. For Google SSO to work in production, both Supabase and Google must know this URL.
+
+### Supabase – URL Configuration
+
+1. Go to **Supabase Dashboard** → **Authentication** → **URL Configuration**.
+2. Set **Site URL** to your production URL, e.g.:
+   - `https://mentalmap.josevschmidt.com.br`
+3. Under **Redirect URLs**, add (one per line):
+   - `https://mentalmap.josevschmidt.com.br`
+   - `https://mentalmap.josevschmidt.com.br/**`  
+   (the `/**` allows Supabase to redirect back to any path)
+   - For local dev, also add: `http://localhost:5173` and `http://localhost:5173/**`
+4. Save.
+
+If the production URL is missing here, users will get an error after signing in with Google (“redirect URL not allowed” or similar).
+
+### Google Cloud – OAuth client
+
+1. Open your OAuth 2.0 **Web application** client (e.g. `mentalmap-web`).
+2. **Authorized redirect URIs** – must include **only** the Supabase callback (from Supabase → Authentication → Providers → Google), e.g.:
+   - `https://YOUR_PROJECT_REF.supabase.co/auth/v1/callback`
+3. **Authorized JavaScript origins** – must include the origins where your app runs:
+   - `https://mentalmap.josevschmidt.com.br`
+   - For local dev: `http://localhost:5173`
+4. Save.
+
+---
+
+## 6. Troubleshooting Google SSO
+
+| Symptom | What to check |
+|--------|----------------|
+| Redirect error after clicking “Sign in with Google” | **Supabase** → Authentication → URL Configuration: add your production URL to **Redirect URLs** and set **Site URL**. |
+| “Redirect URI mismatch” or “invalid_request” from Google | **Google Cloud** → Credentials → your OAuth client: **Authorized redirect URIs** must contain exactly the Supabase callback URL (from Supabase → Auth → Providers → Google). No typo, no extra slash. |
+| Popup blocked or “origin not allowed” | **Google Cloud** → same OAuth client: **Authorized JavaScript origins** must include `https://mentalmap.josevschmidt.com.br` (and `http://localhost:5173` for local). |
+| Works locally but not in production | Confirm production URL is in Supabase **Redirect URLs** and **Site URL**, and in Google **Authorized JavaScript origins**. Rebuild/redeploy after changing only Supabase/Google (no code change needed). |
+| “Supabase not configured” in browser console | Build is missing env: ensure GitHub repo has **Secrets** `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`; they are injected in the deploy workflow. |
+
+---
+
 ## Summary of Private vs. Public
 - **Public**: Your code, your `.gitignore`, and the `SETUP_GUIDE.md`.
 - **Private (Local)**: The `.env.local` file.
