@@ -11,13 +11,19 @@ import { ExportModal } from './components/ExportModal';
 import { SearchModal } from './components/SearchModal';
 import { NotesPanel } from './components/NotesPanel';
 import { ShortcutHints } from './components/ShortcutHints';
+import { MapsDashboard } from './components/MapsDashboard';
 import { AuthProvider, useAuth } from './services/auth';
-import { loadMap, saveMap, getStorageUsage } from './services/storage';
+import { loadMap, saveMap, getStorageUsage, listMaps, MindMap } from './services/storage';
 
 function AppContent() {
   const [nodes, setNodes] = useState<MindMapNode[]>(INITIAL_NODES);
   const [relationships, setRelationships] = useState<Relationship[]>([]);
   const { user, signInWithGoogle, logout } = useAuth();
+
+  // Map Management State
+  const [currentMapId, setCurrentMapId] = useState<string | null>(null);
+  const [currentMapName, setCurrentMapName] = useState<string>('Untitled Map');
+  const [isMapsDashboardOpen, setIsMapsDashboardOpen] = useState(false);
   const [storageUsage, setStorageUsage] = useState(0);
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -50,37 +56,66 @@ function AppContent() {
 
   // --- Storage Persistence ---
 
-  // Load from cloud when user logs in
+  // Load latest map from cloud when user logs in (if none active)
   useEffect(() => {
-    const fetchData = async () => {
-      if (user) {
-        const data = await loadMap(user.id);
-        if (data) {
-          setNodes(data.nodes);
-          setRelationships(data.relationships);
-          const usage = await getStorageUsage(user.id);
-          setStorageUsage(usage);
+    const fetchLatest = async () => {
+      if (user && !currentMapId) {
+        const maps = await listMaps(user.id);
+        if (maps.length > 0) {
+          handleSelectMap(maps[0]);
         }
+      } else if (!user) {
+        // Reset when logging out
+        setCurrentMapId(null);
+        setCurrentMapName('Untitled Map');
+        setNodes(INITIAL_NODES);
+        setRelationships([]);
       }
     };
-    fetchData();
+    fetchLatest();
   }, [user]);
 
   // Auto-save to cloud
   useEffect(() => {
     const persistData = async () => {
       if (user) {
-        const result = await saveMap(user.id, nodes, relationships);
-        if (result.success) {
-          setStorageUsage(result.usage || 0);
-        } else if (result.message) {
-          setErrorMsg(result.message);
-          setTimeout(() => setErrorMsg(null), 5000);
+        // If we have nodes beyond initial, or we already have a mapId
+        const isDirty = nodes.length > INITIAL_NODES.length || relationships.length > 0 || currentMapId;
+
+        if (isDirty) {
+          const result = await saveMap(user.id, nodes, relationships, currentMapId || undefined, currentMapName);
+          if (result.success) {
+            setStorageUsage(result.usage || 0);
+            if (result.mapId && !currentMapId) {
+              setCurrentMapId(result.mapId);
+            }
+          } else if (result.message) {
+            setErrorMsg(result.message);
+            setTimeout(() => setErrorMsg(null), 5000);
+          }
         }
       }
     };
     persistData();
-  }, [nodes, relationships, user]);
+  }, [nodes, relationships, user, currentMapId, currentMapName]);
+
+  const handleSelectMap = (map: MindMap) => {
+    setCurrentMapId(map.id);
+    setCurrentMapName(map.name);
+    setNodes(map.data.nodes);
+    setRelationships(map.data.relationships);
+    getStorageUsage(map.user_id).then(setStorageUsage);
+    setCenterOnNodeId(ROOT_NODE_ID);
+  };
+
+  const handleCreateNewMap = () => {
+    setCurrentMapId(null);
+    setCurrentMapName('New Concept Map');
+    setNodes(INITIAL_NODES);
+    setRelationships([]);
+    setStorageUsage(0);
+    setCenterOnNodeId(ROOT_NODE_ID);
+  };
 
   // --- History Helper ---
 
@@ -441,14 +476,20 @@ function AppContent() {
       <input type="file" ref={imageInputRef} onChange={handleImageFile} accept="image/*" className="hidden" />
 
       {/* Top left: mentalmap (center on root) */}
-      <button
-        type="button"
-        onClick={() => setCenterOnNodeId(ROOT_NODE_ID)}
-        className="absolute top-4 left-4 z-50 text-2xl font-bold text-slate-500 hover:text-slate-800 transition-colors"
-        title="Center on main root"
-      >
-        mentalmap
-      </button>
+      <div className="absolute top-4 left-4 z-50 flex flex-col">
+        <button
+          type="button"
+          onClick={() => setCenterOnNodeId(ROOT_NODE_ID)}
+          className="text-2xl font-bold text-slate-500 hover:text-slate-800 transition-colors"
+          title="Center on main root"
+        >
+          mentalmap
+        </button>
+        <span className="text-[10px] uppercase tracking-widest font-bold text-slate-400 opacity-60">
+          {currentMapName}
+        </span>
+      </div>
+
       <button
         onClick={() => {
           setIsPresenterMode(!isPresenterMode);
@@ -530,6 +571,7 @@ function AppContent() {
             onLogin={signInWithGoogle}
             onLogout={logout}
             storageUsage={storageUsage}
+            onOpenDashboard={() => setIsMapsDashboardOpen(true)}
           />
 
           <SearchModal
@@ -549,6 +591,17 @@ function AppContent() {
             }}
             theme={theme}
           />
+
+          {user && (
+            <MapsDashboard
+              userId={user.id}
+              isOpen={isMapsDashboardOpen}
+              onClose={() => setIsMapsDashboardOpen(false)}
+              onLoadMap={handleSelectMap}
+              onCreateNew={handleCreateNewMap}
+              currentMapId={currentMapId}
+            />
+          )}
         </>
       )}
 
