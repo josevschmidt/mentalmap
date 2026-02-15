@@ -17,11 +17,12 @@ function parseTextToNodes(text: string, includeNumbering: boolean): MindMapNode[
   const numberToId: Record<string, string> = {};
 
   for (const line of lines) {
-    const match = line.match(/^([\d]+(?:\.[\d]+)*)\s+(.+)$/);
+    const match = line.match(/^([\d]+(?:\.[\d]+)*)\.?\s*[-–—:)]\s*(.+)$/) ||
+                  line.match(/^([\d]+(?:\.[\d]+)*)\.?\s+(.+)$/);
     if (!match) continue;
 
     const numbering = match[1];
-    const name = match[2];
+    const name = match[2].trim();
     const id = uuidv4();
     numberToId[numbering] = id;
 
@@ -268,11 +269,11 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImp
               <textarea
                 value={textInput}
                 onChange={(e) => setTextInput(e.target.value)}
-                placeholder={`1 Central Topic\n1.1 First Branch\n1.1.1 Sub-topic A\n1.1.2 Sub-topic B\n1.2 Second Branch\n2 Another Root\n2.1 Its child`}
+                placeholder={`1 Central Topic\n1.1 First Branch\n1.1.1 Sub-topic A\n1.1.2 - Sub-topic B\n1.2. Second Branch\n2) Another Root\n2.1: Its child`}
                 className="w-full h-40 border border-slate-200 rounded-xl p-3 text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-300 placeholder:text-slate-300"
               />
               <p className="text-xs text-slate-400 mt-2">
-                Use numbering to define hierarchy: 1, 1.1, 1.1.1, etc.
+                Use numbering to define hierarchy. Accepts: 1.1 Text, 1.1. Text, 1.1 - Text, 1.1: Text, 1.1) Text
               </p>
             </div>
           )}
