@@ -1,3 +1,20 @@
+# Never cache index.html so users always get the latest build
+<IfModule mod_headers.c>
+  <FilesMatch "index\.html$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
+</IfModule>
+
+# Long-cache hashed assets (Vite adds content hashes to filenames)
+<IfModule mod_headers.c>
+  <FilesMatch "\.(js|css|woff2?|png|jpg|svg|ico)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+</IfModule>
+
+# SPA fallback: serve index.html for all routes
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
