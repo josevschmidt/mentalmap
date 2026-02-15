@@ -105,7 +105,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         <button
           onClick={onImport}
           className="p-2 text-slate-500 hover:bg-slate-100 hover:text-blue-600 rounded-xl transition-colors"
-          title="Import JSON"
+          title="Import"
         >
           <Upload size={18} />
         </button>

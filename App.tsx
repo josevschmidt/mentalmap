@@ -8,6 +8,7 @@ import { Navbar } from './components/Navbar';
 import { ShortcutsModal } from './components/ShortcutsModal';
 import { HistoryPanel } from './components/HistoryPanel';
 import { ExportModal } from './components/ExportModal';
+import { ImportModal } from './components/ImportModal';
 import { SearchModal } from './components/SearchModal';
 import { NotesPanel } from './components/NotesPanel';
 import { ShortcutHints } from './components/ShortcutHints';
@@ -36,7 +37,6 @@ function AppContent() {
   const [connectingNodeId, setConnectingNodeId] = useState<string | null>(null);
 
   // Hidden inputs
-  const importInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [uploadingNodeId, setUploadingNodeId] = useState<string | null>(null);
 
@@ -44,6 +44,7 @@ function AppContent() {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [activeNoteNodeId, setActiveNoteNodeId] = useState<string | null>(null);
 
@@ -169,40 +170,11 @@ function AppContent() {
 
   // --- File Operations ---
 
-  const handleImportClick = () => {
-    if (importInputRef.current) {
-      importInputRef.current.value = '';
-      importInputRef.current.click();
-    }
-  };
-
-  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const json = event.target?.result as string;
-        const importedData = JSON.parse(json);
-        if (Array.isArray(importedData)) {
-          setNodes(importedData);
-          setRelationships([]);
-          addToHistory(importedData, 'Imported JSON', []);
-        } else if (importedData.nodes) {
-          setNodes(importedData.nodes);
-          setRelationships(importedData.relationships || []);
-          addToHistory(importedData.nodes, 'Imported JSON', importedData.relationships || []);
-        } else {
-          setErrorMsg("Invalid JSON file format");
-        }
-        setSelectedIds([]);
-      } catch (err) {
-        console.error(err);
-        setErrorMsg("Failed to parse JSON file");
-      }
-    };
-    reader.readAsText(file);
+  const handleImportData = (importedNodes: MindMapNode[], importedRelationships: Relationship[]) => {
+    setNodes(importedNodes);
+    setRelationships(importedRelationships);
+    addToHistory(importedNodes, 'Imported Mind Map', importedRelationships);
+    setSelectedIds([]);
   };
 
   const handleAddImageRequest = (nodeId: string) => {
@@ -465,7 +437,6 @@ function AppContent() {
   return (
     <div className={`w-screen h-screen overflow-hidden font-sans relative ${theme === 'midnight' ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
 
-      <input type="file" ref={importInputRef} onChange={handleImportFile} accept=".json" className="hidden" />
       <input type="file" ref={imageInputRef} onChange={handleImageFile} accept="image/*" className="hidden" />
 
       {/* Top left: Brand */}
@@ -552,7 +523,7 @@ function AppContent() {
             onShowHelp={() => setIsHelpOpen(true)}
             onExport={() => setIsExportOpen(true)}
             onHistory={() => setIsHistoryOpen(true)}
-            onImport={handleImportClick}
+            onImport={() => setIsImportOpen(true)}
             isFocusMode={isFocusMode}
             onToggleFocus={() => setIsFocusMode(!isFocusMode)}
             currentTheme={theme}
@@ -595,6 +566,7 @@ function AppContent() {
       <ShortcutsModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
       <HistoryPanel isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} history={history} onRestore={restoreHistory} />
       <ExportModal isOpen={isExportOpen} onClose={() => setIsExportOpen(false)} nodes={nodes} canvasId="mindmap-canvas-container" />
+      <ImportModal isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} onImport={handleImportData} />
 
     </div>
   );
