@@ -135,6 +135,13 @@ export const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
 
     const zoom = d3.zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.1, 3])
+      .wheelDelta((event) => {
+        // Touchpad pinch sends small deltaY with ctrlKey; mouse wheel sends large deltaY.
+        // Dampen mouse wheel so zoom feels consistent across input devices.
+        const delta = -event.deltaY;
+        const isTouchpad = event.deltaMode === 0 && Math.abs(event.deltaY) < 50;
+        return delta * (isTouchpad ? 0.01 : 0.002);
+      })
       .filter((event) => {
         if (event.type === 'mousedown' && event.button === 1) return true;
         if (event.type === 'wheel' && event.ctrlKey) return true;
