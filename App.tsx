@@ -185,21 +185,54 @@ function AppContent() {
     }
   };
 
-  const handleImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const compressImage = (file: File, maxWidth = 800, quality = 0.7): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let { width, height } = img;
+
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) { reject(new Error('Canvas not supported')); return; }
+
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = event.target?.result as string;
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleImageFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !uploadingNodeId) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target?.result as string;
+    try {
+      const compressed = await compressImage(file);
+      const nodeId = uploadingNodeId;
       setNodes(prev => {
-        const newNodes = prev.map(n => n.id === uploadingNodeId ? { ...n, image: base64 } : n);
+        const newNodes = prev.map(n => n.id === nodeId ? { ...n, image: compressed } : n);
         addToHistory(newNodes, 'Added Image');
         return newNodes;
       });
-      setUploadingNodeId(null);
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Image compression failed:', err);
+      setErrorMsg('Failed to process image');
+      setTimeout(() => setErrorMsg(null), 3000);
+    }
+    setUploadingNodeId(null);
   };
 
   // --- Actions ---
