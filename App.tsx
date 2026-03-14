@@ -52,6 +52,8 @@ function AppContent() {
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isPresenterMode, setIsPresenterMode] = useState(false);
   const [centerOnNodeId, setCenterOnNodeId] = useState<string | null>(null);
+  const [isSpacebarHeld, setIsSpacebarHeld] = useState(false);
+  const spacebarDragOccurredRef = useRef(false);
 
   // History State
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -452,9 +454,10 @@ function AppContent() {
         }
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
         if (currentSelectedIds.length > 0) currentSelectedIds.forEach(id => deleteNode(id));
-      } else if (e.key === ' ' && currentSelectedIds.length === 1) {
+      } else if (e.key === ' ') {
         e.preventDefault();
-        toggleCollapse(currentSelectedIds[0]);
+        setIsSpacebarHeld(true);
+        spacebarDragOccurredRef.current = false;
       } else if (e.key.toLowerCase() === 'f') {
         setIsFocusMode(prev => !prev);
       } else if (e.key.toLowerCase() === 'k' && (e.ctrlKey || e.metaKey)) {
@@ -463,8 +466,24 @@ function AppContent() {
       }
     };
 
+    const handleKeyUp = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
+      if (isInput || target.isContentEditable) return;
+      if (e.key === ' ') {
+        setIsSpacebarHeld(false);
+        if (!spacebarDragOccurredRef.current && currentSelectedIds.length === 1) {
+          toggleCollapse(currentSelectedIds[0]);
+        }
+      }
+    };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
   }, [addNode, deleteNode, toggleCollapse, selectedIds, nodes]);
 
   return (
@@ -544,6 +563,8 @@ function AppContent() {
         onNodeConnection={handleNodeConnection}
         centerOnNodeId={centerOnNodeId}
         onCenterComplete={() => setCenterOnNodeId(null)}
+        isSpacebarHeld={isSpacebarHeld}
+        onSpacebarDragStart={() => { spacebarDragOccurredRef.current = true; }}
       />
 
       {/* Bottom Toolbar */}

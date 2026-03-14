@@ -13,12 +13,13 @@ export const ShortcutsModal: React.FC<Props> = ({ isOpen, onClose }) => {
     { keys: ['Tab'], desc: 'Add Child Node' },
     { keys: ['Enter'], desc: 'Add Sibling Node' },
     { keys: ['Del', 'Bksp'], desc: 'Delete Node' },
-    { keys: ['Space'], desc: 'Toggle Collapse' },
+    { keys: ['Space'], desc: 'Toggle Collapse (tap)' },
+    { keys: ['Space', '+ Drag'], desc: 'Pan Canvas' },
     { keys: ['F'], desc: 'Toggle Focus Mode' },
     { keys: ['Ctrl', 'K'], desc: 'Search / Jump' },
     { keys: ['Dbl Click'], desc: 'Edit Text' },
     { keys: ['Esc'], desc: 'Exit Edit Mode' },
-    { keys: ['Drag'], desc: 'Pan Canvas' },
+    { keys: ['Mid Mouse', 'Drag'], desc: 'Pan Canvas' },
     { keys: ['Scroll'], desc: 'Zoom In/Out' },
   ];
 
