@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, MousePointer2, Plus, CornerDownRight, Maximize2 } from 'lucide-react';
+import { Search, MousePointer2, Plus, CornerDownRight, Maximize2, Hand } from 'lucide-react';
 
 interface KeyProps {
   children: React.ReactNode;
@@ -59,10 +59,15 @@ export const ShortcutHints: React.FC = () => {
           icon={<Search size={14} />} 
           label="Search" 
         />
-        <HintItem 
-          keys={['F']} 
-          icon={<Maximize2 size={14} />} 
-          label="Focus" 
+        <HintItem
+          keys={['F']}
+          icon={<Maximize2 size={14} />}
+          label="Focus"
+        />
+        <HintItem
+          keys={['Spc']}
+          icon={<Hand size={14} />}
+          label="Pan"
         />
       </div>
     </div>

@@ -30,6 +30,8 @@ interface MindMapCanvasProps {
   onMoveNodeTo: (nodeId: string, newParentId: string | null, siblingId: string | null) => void;
   centerOnNodeId: string | null;
   onCenterComplete: () => void;
+  isSpacebarHeld: boolean;
+  onSpacebarDragStart: () => void;
 }
 
 export const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
@@ -54,6 +56,8 @@ export const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
   onMoveNodeTo,
   centerOnNodeId,
   onCenterComplete,
+  isSpacebarHeld,
+  onSpacebarDragStart,
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const gRef = useRef<SVGGElement>(null);
@@ -73,6 +77,10 @@ export const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
   } | null>(null);
 
   const [dragTarget, setDragTarget] = useState<{ id: string; action: 'reparent' | 'before' | 'after' } | null>(null);
+
+  // Spacebar Pan State
+  const spacebarPanStartRef = useRef<{ clientX: number; clientY: number; transformX: number; transformY: number } | null>(null);
+  const [isSpacebarPanning, setIsSpacebarPanning] = useState(false);
 
   // Compute Layout
   const { nodes: layoutNodes } = useMemo(() => calculateLayout(nodes), [nodes]);
@@ -254,6 +262,20 @@ export const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
+    // Spacebar pan mode: start panning instead of box selection
+    if (isSpacebarHeld) {
+      const svg = svgRef.current!;
+      const currentTransform = d3.zoomTransform(svg);
+      spacebarPanStartRef.current = {
+        clientX: e.clientX,
+        clientY: e.clientY,
+        transformX: currentTransform.x,
+        transformY: currentTransform.y,
+      };
+      onSpacebarDragStart();
+      setIsSpacebarPanning(true);
+      return;
+    }
     // If linking, cancel
     if (connectingNodeId) {
       onNodeConnection('', ''); // Cancel
@@ -299,6 +321,7 @@ export const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
   // --- Managed Drag System ---
 
   const handleNodeDragStart = (nodeId: string, clientX: number, clientY: number) => {
+    if (isSpacebarHeld) return; // Spacebar pan mode takes priority
     // Calculate Drag Offset
     const node = layoutNodes.find(n => n.id === nodeId);
     if (!node) return;
@@ -454,9 +477,42 @@ export const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
     };
   }, [draggingState !== null]); // Only re-run when drag starts/stops, NOT on every mousemove
 
-  // Clean up old handlers
-  // (Removed handleNodeDrag and handleNodeDragEnd)
+  // Spacebar pan: global mouse handlers
+  useEffect(() => {
+    if (!isSpacebarPanning) return;
 
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      const start = spacebarPanStartRef.current;
+      if (!start || !zoomRef.current || !svgRef.current) return;
+      const dx = e.clientX - start.clientX;
+      const dy = e.clientY - start.clientY;
+      const currentTransform = d3.zoomTransform(svgRef.current);
+      const newTransform = d3.zoomIdentity
+        .translate(start.transformX + dx, start.transformY + dy)
+        .scale(currentTransform.k);
+      d3.select(svgRef.current).call(zoomRef.current.transform, newTransform);
+    };
+
+    const handleGlobalMouseUp = () => {
+      spacebarPanStartRef.current = null;
+      setIsSpacebarPanning(false);
+    };
+
+    window.addEventListener('mousemove', handleGlobalMouseMove);
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleGlobalMouseMove);
+      window.removeEventListener('mouseup', handleGlobalMouseUp);
+    };
+  }, [isSpacebarPanning]);
+
+  // Clear spacebar pan when spacebar is released
+  useEffect(() => {
+    if (!isSpacebarHeld) {
+      spacebarPanStartRef.current = null;
+      setIsSpacebarPanning(false);
+    }
+  }, [isSpacebarHeld]);
 
   const handleNodeClick = (id: string, multi: boolean) => {
     if (connectingNodeId) {
@@ -502,8 +558,10 @@ export const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
 
   const currentTheme = THEMES[theme];
 
+  const cursorClass = isSpacebarPanning ? 'cursor-grabbing' : isSpacebarHeld ? 'cursor-grab' : 'cursor-default';
+
   return (
-    <div id="mindmap-canvas-container" className={`w-full h-full overflow-hidden relative select-none cursor-default ${currentTheme.bg}`}>
+    <div id="mindmap-canvas-container" className={`w-full h-full overflow-hidden relative select-none ${cursorClass} ${currentTheme.bg}`}>
       {/* Linking Mode Indicator */}
       {connectingNodeId && (
         <div className="absolute top-20 left-1/2 -translate-x-1/2 z-50 bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg animate-pulse pointer-events-none">
